@@ -43,7 +43,7 @@ module Minfraud
     # For example, a score of 20 indicates a 20% chance that a transaction is fraudulent.
     # @return [Float] 0.01 - 100.0
     def risk_score
-      results.risk_score
+      results.risk_score.to_f
     end
 
     def distance
@@ -102,6 +102,10 @@ module Minfraud
       results.ip_corporate_proxy
     end
 
+    def maxmind_id
+      results.maxmind_id
+    end
+
     # Hash of attributes that have been set
     # @return [Hash] present attributes
     def attributes
@@ -116,6 +120,31 @@ module Minfraud
     # @return [String, nil] requested type
     def requested_type
       @requested_type or Minfraud.requested_type
+    end
+
+    # Sends transaction to MaxMind in order to get risk data on it.
+    # Caches response object in @response.
+    # Looks like:
+    #
+    # #<Minfraud::Response:0x007f9fdbebc710 @body={:distance=>"10489", :country_match=>"No",
+    # :country_code=>"KR", :free_mail=>"No", :anonymous_proxy=>"No", :bin_match=>"NA",
+    # :bin_country=>nil, :err=>"POSTAL_CODE_NOT_FOUND", :proxy_score=>"0.00", :ip_region=>"11",
+    # :ip_city=>"Seoul", :ip_latitude=>"37.5985", :ip_longitude=>"126.9783", :bin_name=>nil,
+    # :ip_isp=>"Seoul National University", :ip_org=>"Seoul National University",
+    # :bin_name_match=>"NA", :bin_phone_match=>"NA", :bin_phone=>nil,
+    # :cust_phone_in_billing_loc=>"NotFound", :high_risk_country=>"No", :queries_remaining=>"1097",
+    # :city_postal_match=>nil, :ship_city_postal_match=>nil, :maxmind_id=>"GTQOJ4MY",
+    # :ip_asnum=>"AS9488 Seoul National University", :ip_user_type=>"college", :ip_country_conf=>"99",
+    # :ip_region_conf=>"90", :ip_city_conf=>"50", :ip_postal_code=>nil, :ip_postal_conf=>"40",
+    # :ip_accuracy_radius=>"3", :ip_net_speed_cell=>"Cable/DSL", :ip_metro_code=>"0", :ip_area_code=>"0",
+    # :ip_time_zone=>"Asia/Seoul", :ip_region_name=>"Seoul-t'ukpyolsi", :ip_domain=>"snu.ac.kr",
+    # :ip_country_name=>"Korea, Republic of", :ip_continent_code=>"AS", :ip_corporate_proxy=>"No",
+    # :carder_email=>"No", :risk_score=>"23.29", :prepaid=>nil, :minfraud_version=>"1.3",
+    # :service_level=>"standard"}>
+    #
+    # @return [Response]
+    def results
+      @response ||= Request.get(self)
     end
 
     private
@@ -141,13 +170,6 @@ module Minfraud
       unless attribute.instance_of?(String)
         raise TransactionError, "Transaction.#{attr_name} must be a string"
       end
-    end
-
-    # Sends transaction to MaxMind in order to get risk data on it.
-    # Caches response object in @response.
-    # @return [Response]
-    def results
-      @response ||= Request.get(self)
     end
 
     # @return [String, nil] domain of the email address
